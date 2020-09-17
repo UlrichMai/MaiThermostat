@@ -18,7 +18,7 @@ homekit_characteristic_t accessory_name                           = HOMEKIT_CHAR
 homekit_characteristic_t accessory_manufacturer                   = HOMEKIT_CHARACTERISTIC_(MANUFACTURER, "UM");
 homekit_characteristic_t accessory_serial_number                  = HOMEKIT_CHARACTERISTIC_(SERIAL_NUMBER, "SN_00000001");
 homekit_characteristic_t accessory_model                          = HOMEKIT_CHARACTERISTIC_(MODEL, "BHT-002-GALW");
-homekit_characteristic_t accessory_firmware_revision              = HOMEKIT_CHARACTERISTIC_(FIRMWARE_REVISION, "0.0.1");
+homekit_characteristic_t accessory_firmware_revision              = HOMEKIT_CHARACTERISTIC_(FIRMWARE_REVISION, "0.0.2");
 homekit_characteristic_t accessory_identify_cb                    = HOMEKIT_CHARACTERISTIC_(IDENTIFY, accessory_identify);
 
 homekit_characteristic_t thermostat_name                          = HOMEKIT_CHARACTERISTIC_(NAME, "Thermostat");
@@ -27,8 +27,9 @@ homekit_characteristic_t thermostat_target_temperature            = HOMEKIT_CHAR
 homekit_characteristic_t thermostat_current_heating_cooling_state = HOMEKIT_CHARACTERISTIC_(CURRENT_HEATING_COOLING_STATE, 0, .valid_values = {.count = 2, .values = (uint8_t[]) {0,1} }, .getter=NULL );
 homekit_characteristic_t thermostat_target_heating_cooling_state  = HOMEKIT_CHARACTERISTIC_(TARGET_HEATING_COOLING_STATE,  0, .valid_values = {.count = 2, .values = (uint8_t[]) {0,1} }, .getter=NULL, .setter=NULL  );
 homekit_characteristic_t thermostat_temperature_display_units     = HOMEKIT_CHARACTERISTIC_(TEMPERATURE_DISPLAY_UNITS, 0); //Celsius
+#ifdef BME280
 homekit_characteristic_t thermostat_current_humidity              = HOMEKIT_CHARACTERISTIC_(CURRENT_RELATIVE_HUMIDITY, 50.0, .min_step  = (float[]) {1.0},  .getter=NULL );
-
+#endif
 homekit_accessory_t *accessories[] =
 		{
 				HOMEKIT_ACCESSORY(
@@ -54,7 +55,9 @@ homekit_accessory_t *accessories[] =
                   &thermostat_current_heating_cooling_state,
                   &thermostat_target_heating_cooling_state,
                   &thermostat_temperature_display_units,
+#ifdef BME280
 				  &thermostat_current_humidity,
+#endif
                   NULL
                 }),
 
@@ -86,7 +89,9 @@ void homekit_notify_loop() {
   NOTIFY_WHEN_CHANGED(1,thermostat_target_temperature);
   NOTIFY_WHEN_CHANGED(2,thermostat_current_heating_cooling_state);
   NOTIFY_WHEN_CHANGED(3,thermostat_target_heating_cooling_state);
+#ifdef BME280
   NOTIFY_WHEN_CHANGED(4,thermostat_current_humidity);
+#endif
 }
 
 homekit_value_t HOMEKIT_FLOAT_CPPX(float value, float min_value, float max_value) {

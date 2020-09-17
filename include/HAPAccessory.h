@@ -25,7 +25,9 @@ EXPORT_C homekit_characteristic_t thermostat_target_temperature;              //
 EXPORT_C homekit_characteristic_t thermostat_current_heating_cooling_state;   //.getter
 EXPORT_C homekit_characteristic_t thermostat_target_heating_cooling_state;    //.getter,.setter
 EXPORT_C homekit_characteristic_t thermostat_temperature_display_units;
+#ifdef BME280
 EXPORT_C homekit_characteristic_t thermostat_current_humidity;                //.getter
+#endif
 
 EXPORT_C void homekit_notify_loop();
 

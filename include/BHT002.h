@@ -275,7 +275,6 @@ enum WifiState
 
 
 public:
-	//C17GH3State::C17GH3State() {}
 	virtual void loop();
 	virtual void processRx() override;
 	virtual void processRx(int byte) override;

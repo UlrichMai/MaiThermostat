@@ -2,6 +2,7 @@
 #include <ArduinoOTA.h>
 #include <arduino_homekit_server.h>
 #include <Ticker.h>
+#include <WiFiManager.h>
 
 // time includes
 #include <time.h>
@@ -11,11 +12,6 @@
 #include "Debug.h"
 #include "HAPAccessory.h"
 #include "BHT002.h"
-
-#include <Adafruit_BME280.h>
-#include <math.h>
-
-#define PIN_RELAY_MONITOR 13
 
 #ifdef DBG_TCP_ENABLED
   #define DBG_TCP_PORT  8888
@@ -82,11 +78,23 @@ static void initTime() {
 	configTime(TIMEZONE, "pool.ntp.org");
 }
 
-// setup BME280 sensor
+void WifiConfig() {
+  DBG("HomKit reset");
+  homekit_server_reset();
+  DBG("Configuration portal opened");
+  WiFiManager wifiManager;
+  wifiManager.setDebugOutput(false); //no output over serial
+  wifiManager.startConfigPortal();
+};
+
+#ifdef BME280
+// BME280 sensor
+#include <Adafruit_BME280.h>
+#include <math.h>
+
 Adafruit_BME280 bme;
-float humidity = 50.0f;
-float temperature = 20.0f;
-float pressure = 0.0f;
+float humidity = 50.1f;
+float temperature = 20.1f;
 
 Ticker bmeTimer(
   [](const event_t e) ->  void {
@@ -98,17 +106,21 @@ Ticker bmeTimer(
         }
         break;
       case UPDATE:
-        humidity = roundf(bme.readHumidity()) + 2.0f;
         temperature = roundf(bme.readTemperature()*10.0f)/10.0f - 3.0f;
-        pressure = roundf(bme.readPressure());
-        DBG("BME280: humidity=%f,temperature=%f,pressure=%f",humidity,temperature,pressure);
+        humidity = roundf(bme.readHumidity()) + 10.0f;
+        DBG("BME280: humidity=%f,temperature=%f",humidity,temperature);
+        //float E = 6.112 * exp((17.62*temperature)/(243.12+temperature));
+        //float La = humidity*E/(461.51*(273.15+temperature))*10000.0; //Absolute Luftfeuchte [g/m³]
+        //float TP = 243.12*((17.62*temperature)/(243.12+temperature)+log(humidity/100.0))/((17.62*243.12)/(243.12+temperature)-log(humidity/100.0)); //Taupunkt [°C]
         break;
     }
   },  
   10000);
-
+#endif
 void setup() {
 
+/* WiFi will use persisted credentials */
+/*
   WiFi.mode(WIFI_STA);
   WiFi.persistent(false);
   WiFi.disconnect(false);
@@ -118,7 +130,7 @@ void setup() {
   while (WiFi.status() != WL_CONNECTED) {
     delay(250);
   }
-
+*/
   generateHostname();
   
   ArduinoOTA.setHostname(hostname);
@@ -130,10 +142,7 @@ void setup() {
   
  	Serial.begin(9600);
 
-	state.setWifiConfigCallback([]() {
-    DBG("Configuration portal opened");
-    homekit_server_reset();
-   });
+	state.setWifiConfigCallback(WifiConfig);
  
   initTime();
 
@@ -148,23 +157,31 @@ void setup() {
     [](const homekit_value_t v) -> void { state.setSetPointTemp(v.float_value,true); thermostat_target_temperature.value = v; };
 
   thermostat_current_heating_cooling_state.getter = 
+#ifdef PIN_RELAY_MONITOR
     []() -> homekit_value_t { return HOMEKIT_UINT8_CPP( state.getIsHeating() ? 1 : 0 ); };
-// solution if IsHeating is not working:
-//  []() -> homekit_value_t { return HOMEKIT_UINT8_CPP( state.getSetPointTemp() > state.getInternalTemp()  ? 1 : 0 ); };
-
+#else
+    []() -> homekit_value_t { return HOMEKIT_UINT8_CPP( state.getSetPointTemp() > state.getInternalTemp()  ? 1 : 0 ); };
+#endif
   thermostat_target_heating_cooling_state.getter = 
     []() -> homekit_value_t { return HOMEKIT_UINT8_CPP( state.getPower() ? 1 : 0 ); };
   thermostat_target_heating_cooling_state.setter =
     [](const homekit_value_t v) -> void { state.setPower(v.uint8_value != 0,true); thermostat_target_heating_cooling_state.value = v; };
 
+#ifdef BME280
   thermostat_current_humidity.getter = 
     []() -> homekit_value_t { return HOMEKIT_FLOAT_CPPX(humidity,0.0,100.0 );  };
+#endif
 
   arduino_homekit_setup(&config);
 
+#ifdef BME280
   bmeTimer.start();
-  
+#endif
+#ifdef PIN_RELAY_MONITOR  
   pinMode(PIN_RELAY_MONITOR, INPUT);
+#endif
+
+  pinMode(0, INPUT);
 }
 
 void loop() {
@@ -176,11 +193,13 @@ void loop() {
   
 	state.loop();
 
+#ifdef BME280
   bmeTimer.update();
-
+#endif
+#ifdef PIN_RELAY_MONITOR
   state.setIsHeating(digitalRead(PIN_RELAY_MONITOR));   
-
-  #ifdef DBG_TCP_ENABLED
+#endif
+#ifdef DBG_TCP_ENABLED
   if (!clientDebug.connected()) {
     clientDebug.flush();
     clientDebug.stop();
@@ -197,7 +216,11 @@ void loop() {
     DBG("getPower=%d,getLock=%d,getExternalTemp=%f,getInternalTemp=%f,getSetPointTemp=%f,getIsHeating=%d",
     state.getPower(),state.getLock(),state.getExternalTemp(),state.getInternalTemp(),state.getSetPointTemp(),state.getIsHeating() );
   }
-  #endif 
+#endif 
+  //last chance to force wifi setup 
+  if (digitalRead(0)==0) {
+    WifiConfig();
+  }
 
   delay(100);
 
