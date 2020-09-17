@@ -19,9 +19,6 @@
   WiFiClient clientDebug;
 #endif // DBG_TCP
 
-// Private.h contains the ssid and password as a temporary measure until a config page is added
-#include "Private_UM.h"
-
 #define TIMEZONE 	"CET-1CEST,M3.5.0,M10.5.0/3" // Europe/Berlin FROM https://github.com/nayarsystems/posix_tz_db/blob/master/zones.json
 
 TUYAThermostatState state;

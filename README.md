@@ -8,7 +8,6 @@ I added a humidity sensor and published the value in homekit.
 - build firmware (platformio.ini)
   - -D BME280  // if you installed the additional sensor
   - -D PIN_RELAY_MONITOR=13  // if you attached the relais signal to gpio13
-  - fill Private.h with wifi and ota credentials 
   - test firmware on a spare ESP-8266 device, test the homekit pairing and the ota update. If ota is not working, you must flash it via serial, solder wire to the chip. It did not happen to me yet, and I hope it will not. 
 - buy BHT-002-GALW
 - use tuya-convert to flash new firmware
@@ -18,6 +17,8 @@ I added a humidity sensor and published the value in homekit.
   - wire GPIO13 to get the relais heating state
   - install the BME280 sensor and connect it to GPIO4+5 and GND+VCC
 - connect temporary power for testing before installation to the wall
+- add to your wifi network
+  - power off, hold right down button 10sec, display flashing, connect to ESPxxxxxx wifi captive portal, enter credetials
 - pair with HomeKit
 
 ## debugging
